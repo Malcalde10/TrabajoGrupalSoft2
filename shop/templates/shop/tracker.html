@@ -1,0 +1,137 @@
+{% extends 'shop/basic.html' %}
+{% block title %} Tracker Page {% endblock %}
+
+{%block nav%}
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <a class="navbar-brand" href="/shop"> AGRICULTURE </a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav mr-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="/shop">Productos </a>
+                </li>
+                <li class="nav-item active">
+                    <a class="nav-link" href="/shop/tracker">Pedidos<span class="sr-only">(current)</span></a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/shop/about">Sobre nosotros</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/blog">Blog</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/shop/contact">Contactanos</a>
+                </li>
+            </ul>
+            <form class="form-inline my-2 my-lg-0" method="get" action="/shop/search">
+                <input class="form-control mr-sm-2" type="search" placeholder="Search" aria-label="Search" name="search" id="search">
+                <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Search</button>
+                <button type="button" class="btn btn-secondary mx-2" id="popcart" data-container="body" data-html="true" data-toggle="popover" data-placement="bottom" data-content="what the fuck going on.">
+                    Cart(<span id='crt'>0</span>)
+                </button>
+            </form>
+            <button class="btn btn-primary" onclick="clearCart();"> Clear Cart </button>
+        </div>
+    </nav>
+
+{%endblock%}
+
+{% block body %}
+<div class="container">
+    <div class="col my-4">
+        <h2 class="text-center mb-4"> Enter Your Order ID to track your orders. </h2>
+        <form method="POST" action="" id="trackerForm">
+            {% csrf_token %}
+            <div class="row justify-content-center">
+                <div class="form-group col-md-6 col-sm-12">
+                    <label for="order_id">Order Id</label>
+                    <input type="text" class="form-control" id="orderId" name="orderId" placeholder="Enter your order id" required>
+                </div>
+            </div>
+            <div class="row justify-content-center">
+                <div class="form-group col-md-6 col-sm-12">
+                    <label for="email">Email</label>
+                    <input type="email" class="form-control" id="email" name="email" placeholder="Enter your email" required>
+                </div>
+            </div>
+            <div class="row justify-content-center my-4">
+                <div class="col-md-6 col-sm-12 text-center">
+                    <button type="submit" class="btn btn-primary">Track Your Order</button>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="col my-4" id="order-details" style="display: none;">
+        <h2 class="text-center"> Order Status </h2>
+        <div class="row justify-content-center">
+            <div class="col-md-6 col-sm-12 text-center">
+                <ul class="list-group" id="items">
+                </ul>
+            </div>
+        </div>
+        <h2 class="text-center mt-4"> Your Order Details </h2>
+        <div class="row justify-content-center">
+            <div class="col-md-6 col-sm-12">
+                <ul class="list-group" id="citems">
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block js%}
+<script>
+$('#trackerForm').submit(function(event) {
+    $('#items').empty();
+    var formData = {
+        'orderId': $('input[name=orderId]').val(),
+        'email': $('input[name=email]').val(),
+        'csrfmiddlewaretoken': $('input[name=csrfmiddlewaretoken]').val()
+    };
+    $.ajax({
+            type: 'POST',
+            url: '/shop/tracker',
+            data: formData,
+            encode: true
+        })
+        .done(function(data) {
+            data = JSON.parse(data);
+            $('#citems').empty();
+            if (data['status'] == "success") {
+                updates = data['updates'];
+                for (i = 0; i < updates.length; i++) {
+                    let text = updates[i]['text'];
+                    let time = updates[i]['time'];
+                    var str = `<li class="list-group-item d-flex justify-content-between align-items-center">
+                        ${text}
+                        <span class="badge badge-primary badge-pill">${time}</span>
+                    </li>`;
+                    $('#items').append(str);
+                }
+                cart = data['item_json'];
+                cart = JSON.parse(cart);
+                $('#citems').empty();
+                for (var item in cart) {
+                    let qty = cart[item][0];
+                    let name = cart[item][1];
+                    var str = `<li class="list-group-item d-flex justify-content-between align-items-center">
+                        ${name}
+                        <span class="badge badge-primary badge-pill">${qty}</span>
+                    </li>`;
+                    $('#citems').append(str);
+                }
+            } else {
+                var str = `<li class="list-group-item d-flex justify-content-between align-items-center">
+                Enter Your Correct Details.
+                </li>`;
+                $('#items').append(str);
+                $('#citems').append(str);
+            }
+            $('#order-details').show();
+        });
+    event.preventDefault();
+})
+</script>
+{% endblock %}
